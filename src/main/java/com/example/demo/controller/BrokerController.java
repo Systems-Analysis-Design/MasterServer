@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.Broker;
+import com.example.demo.model.BrokerJoinRequest;
 import com.example.demo.model.HealthRequestDto;
 import com.example.demo.model.JoinResponse;
 import com.example.demo.service.BrokerService;
@@ -21,10 +22,10 @@ public class BrokerController {
     private final BrokerService brokerService;
 
     @PostMapping(path = "/api/join")
-    public JoinResponse join(@RequestBody Broker broker) {
-        log.info(String.format("broker joined with address: %s", broker.getAddress()));
-        broker.setName("name"); // create name for broker
-        broker.setUid(UUID.randomUUID().toString());
+    public JoinResponse join(@RequestBody BrokerJoinRequest brokerJoinRequest) {
+        log.info(String.format("broker joined with address: %s", brokerJoinRequest.host()));
+        String name = UUID.randomUUID().toString();
+        Broker broker = Broker.builder().address(brokerJoinRequest.host()).name(name).build();
         return brokerService.addBroker(broker);
     }
 
