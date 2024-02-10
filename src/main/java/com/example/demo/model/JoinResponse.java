@@ -12,5 +12,4 @@ import java.util.List;
 public class JoinResponse {
     private String name;
     private List<ReplicaBrokerDto> replicaBrokerDtoList;
-
 }

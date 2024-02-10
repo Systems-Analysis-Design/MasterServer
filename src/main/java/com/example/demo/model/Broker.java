@@ -10,6 +10,5 @@ import lombok.Setter;
 public class Broker {
 
     String name;
-    String uid;
     String address;
 }
