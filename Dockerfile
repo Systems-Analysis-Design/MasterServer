@@ -1,8 +1,5 @@
-FROM openjdk:8-jre-alpine
-
+FROM openjdk:18
+WORKDIR /app
+COPY ./target/demo-0.0.1-SNAPSHOT.jar /app
 EXPOSE 8080
-
-COPY ./build/libs/demo-0.0.1-SNAPSHOT.jar /usr/app/
-WORKDIR /usr/app
-
-ENTRYPOINT ["java", "-jar", "demo-0.0.1-SNAPSHOT.jar"]
+CMD ["java", "-jar", "demo-0.0.1-SNAPSHOT.jar"]
