@@ -47,5 +47,5 @@ jobs:
         command_timeout: 5m
         script: |
           sudo -i
-          docker stack deploy --compose-file /root/docker-compose master
+          docker stack deploy --compose-file /root/docker-compose.yaml master
         
