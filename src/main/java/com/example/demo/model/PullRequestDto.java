@@ -1,4 +1,6 @@
 package com.example.demo.model;
 
-public record PullRequestDto(String partition) {
+import java.util.List;
+
+public record PullRequestDto(String name, List<String> replicas) {
 }

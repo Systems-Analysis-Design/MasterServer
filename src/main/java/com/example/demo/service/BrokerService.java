@@ -4,21 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import com.example.demo.model.*;
 
-import org.springframework.http.*;
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
 
 @Slf4j
 @Component
@@ -26,19 +17,56 @@ import java.util.Set;
 public class BrokerService {
 
     private final HashMap<String, Broker> brokers = new HashMap<>();
-    private final BrokerLoadBalancer loadBalancer = new RoundRobin();
+    private final LoadBalancer<Broker> brokerLoadBalancer = new RoundRobin<>();
+    private final Map<Broker, Broker> replicaBrokers = new HashMap<>(); // replica of each broker
+    private final Map<Broker, Set<String>> brokerInsideReplications = new HashMap<>(); // replications inside of each broker
 
     public JoinResponse addBroker(Broker broker) {
-        brokers.put(broker.getName(), broker);
-        loadBalancer.addOne(broker);
-        return new JoinResponse(broker.getName(), List.of()); // replica brokers
+        brokers.put(broker.name(), broker);
+        brokerInsideReplications.put(broker, new HashSet<>());
+        setReplica(broker);
+        brokerLoadBalancer.addOne(broker);
+        return new JoinResponse(broker.name());
     }
 
     public Broker getBroker() {
-        return loadBalancer.getOne();
+        return brokerLoadBalancer.getOne();
     }
 
     public Broker getBrokerByName(String brokerName) {
         return brokers.get(brokerName);
+    }
+
+    public Broker getReplicaBroker(Broker broker) {
+        return replicaBrokers.get(broker);
+    }
+
+    private void setReplica(Broker broker) {
+        setReplicaForBroker(broker);
+        replicaBrokers.entrySet().stream().filter(x -> x.getValue() == null).forEach(x -> setReplicaForBroker(x.getKey()));
+    }
+
+    private void setReplicaForBroker(Broker broker) {
+        Broker replica = getReplicaBrokerWithMinimumLoad(broker);
+        replicaBrokers.put(broker, replica);
+        if (replica != null) {
+            brokerInsideReplications.get(replica).add(broker.name());
+        }
+    }
+
+    private Broker getReplicaBrokerWithMinimumLoad(Broker broker) {
+        Broker replica = null;
+        int min = Integer.MAX_VALUE;
+        Set<Map.Entry<Broker, Set<String>>> entries = brokerInsideReplications.entrySet()
+                                                                              .stream()
+                                                                              .filter(x -> !x.getKey().equals(broker))
+                                                                              .collect(Collectors.toSet());
+        for (Map.Entry<Broker, Set<String>> brokerSetEntry : entries) {
+            if (brokerSetEntry.getValue().size() <= min) {
+                min = brokerSetEntry.getValue().size();
+                replica = brokerSetEntry.getKey();
+            }
+        }
+        return replica;
     }
 }

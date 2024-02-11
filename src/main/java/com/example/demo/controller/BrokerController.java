@@ -23,8 +23,7 @@ public class BrokerController {
     @PostMapping(path = "/api/join")
     public JoinResponse join(@RequestBody BrokerJoinRequest brokerJoinRequest) {
         log.info(String.format("broker joined with address: %s", brokerJoinRequest.host()));
-        String name = UUID.randomUUID().toString();
-        Broker broker = Broker.builder().address(brokerJoinRequest.host()).name(name).build();
+        Broker broker = new Broker(UUID.randomUUID().toString(), brokerJoinRequest.host());
         return brokerService.addBroker(broker);
     }
 
