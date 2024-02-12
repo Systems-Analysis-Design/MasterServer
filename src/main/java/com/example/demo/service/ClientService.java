@@ -46,14 +46,14 @@ public class ClientService {
             }
             return false;
         } catch (Exception e) {
-            return sendPushForReplica(message, replicaBroker, headers);
+            return sendPushForReplica(message, broker.name(), replicaBroker.address(), headers);
         }
     }
 
-    private boolean sendPushForReplica(MessageDto message, Broker broker, HttpHeaders headers) {
-        PushRequestDto brokerPushRequest = new PushRequestDto(broker.name(), message, List.of());
+    private boolean sendPushForReplica(MessageDto message, String name, String address, HttpHeaders headers) {
+        PushRequestDto brokerPushRequest = new PushRequestDto(name, message, List.of());
         HttpEntity<PushRequestDto> entity = new HttpEntity<>(brokerPushRequest, headers);
-        String uri = broker.address() + "/api/push";
+        String uri = address + "/api/push";
         try {
             ResponseEntity<Void> result = restTemplate.exchange(uri, HttpMethod.POST, entity, Void.class);
             return result.getStatusCode().equals(HttpStatusCode.valueOf(200));
@@ -83,14 +83,14 @@ public class ClientService {
             }
             return new MessageDto("null", null);
         } catch (Exception e) {
-            return sendPullForReplica(replicaBroker, headers);
+            return sendPullForReplica(broker.name(), replicaBroker.address(), headers);
         }
     }
 
-    private MessageDto sendPullForReplica(Broker broker, HttpHeaders headers) {
-        PullRequestDto brokerPullRequest = new PullRequestDto(broker.name(), List.of());
+    private MessageDto sendPullForReplica(String name, String address, HttpHeaders headers) {
+        PullRequestDto brokerPullRequest = new PullRequestDto(name, List.of());
         HttpEntity<PullRequestDto> entity = new HttpEntity<>(brokerPullRequest, headers);
-        String uri = broker.address() + "/api/pull";
+        String uri = address + "/api/pull";
         try {
             ResponseEntity<MessageDto> result = restTemplate.exchange(uri, HttpMethod.POST, entity, MessageDto.class);
             if (result.getStatusCode().equals(HttpStatusCode.valueOf(200)) && result.getBody() != null){
