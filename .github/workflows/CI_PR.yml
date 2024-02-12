@@ -1,6 +1,5 @@
 
-name: Java CI with Maven
-
+name: CI-PR
 on:
   pull_request:
     branches: [ "main" ]
