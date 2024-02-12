@@ -5,9 +5,9 @@ services:
     image: mirzaeimahdi409/systems_analysis_design_master:latest
     ports:
       - target: 8080
-        published: 8080
+        published: 8081
     deploy:
-      replicas: 2
+      replicas: 1
       mode: "replicated"
       restart_policy:
         condition: "on-failure"
