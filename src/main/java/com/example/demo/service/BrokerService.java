@@ -38,7 +38,7 @@ public class BrokerService {
     }
 
     public Broker getReplicaBroker(Broker broker) {
-        return replicaBrokers.get(broker);
+        return replicaBrokers.getOrDefault(broker, broker);
     }
 
     private void setReplica(Broker broker) {
