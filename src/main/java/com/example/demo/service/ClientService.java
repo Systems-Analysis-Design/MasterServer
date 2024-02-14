@@ -1,21 +1,19 @@
 package com.example.demo.service;
 
-import com.example.demo.model.*;
-
-import org.springframework.http.*;
-import lombok.extern.slf4j.Slf4j;
+import com.example.demo.model.Broker;
+import com.example.demo.model.MessageDto;
+import com.example.demo.model.PullRequestDto;
+import com.example.demo.model.PushRequestDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.client.RestTemplate;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.*;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-
-import static org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event;
 
 @Slf4j
 @Component
@@ -23,11 +21,8 @@ import static org.springframework.web.servlet.mvc.method.annotation.SseEmitter.e
 public class ClientService {
 
     private final RestTemplate restTemplate;
-    public static final long DEFAULT_TIMEOUT = Long.MAX_VALUE;
-    private final LoadBalancer<SseEmitter> sseEmitterLoadBalancer = new RoundRobin<>();
     private final BrokerService brokerService;
     private final Queue<String> messages = new LinkedList<>();
-
 
     public boolean push(MessageDto message) {
         Broker broker = brokerService.getBroker();
@@ -46,17 +41,20 @@ public class ClientService {
             }
             return false;
         } catch (Exception e) {
-            return sendPushForReplica(message, broker.name(), replicaBroker.address(), headers);
+            return sendPushForReplica(message, broker, replicaBroker, headers);
         }
     }
 
-    private boolean sendPushForReplica(MessageDto message, String name, String address, HttpHeaders headers) {
-        PushRequestDto brokerPushRequest = new PushRequestDto(name, message, List.of());
+    private boolean sendPushForReplica(MessageDto message, Broker broker, Broker replica, HttpHeaders headers) {
+        PushRequestDto brokerPushRequest = new PushRequestDto(broker.name(), message, List.of());
         HttpEntity<PushRequestDto> entity = new HttpEntity<>(brokerPushRequest, headers);
-        String uri = address + "/api/push";
+        String uri = replica.address() + "/api/push";
         try {
             ResponseEntity<Void> result = restTemplate.exchange(uri, HttpMethod.POST, entity, Void.class);
-            return result.getStatusCode().equals(HttpStatusCode.valueOf(200));
+            if (result.getStatusCode().equals(HttpStatusCode.valueOf(200))) {
+                return messages.add(broker.name());
+            }
+            return false;
         } catch (Exception e) {
             return false;
         }
@@ -99,44 +97,6 @@ public class ClientService {
             return new MessageDto("null", null);
         } catch (Exception e) {
             return new MessageDto("null", null);
-        }
-    }
-
-    public SseEmitter subscribe() {
-        SseEmitter emitter = new SseEmitter(DEFAULT_TIMEOUT);
-        emitter.onCompletion(() -> removeAndLog(emitter));
-        emitter.onError((err) -> removeAndLog(emitter));
-        emitter.onTimeout(() -> removeAndLog(emitter));
-        sseEmitterLoadBalancer.addOne(emitter);
-        runSubscribersThread();
-        log.info("subscribed successfully.");
-        return emitter;
-    }
-
-    @Scheduled(fixedDelay = 1000)
-    public void runSubscribersThread() {
-        if (!sseEmitterLoadBalancer.isEmpty() && !messages.isEmpty()) {
-            sendMessage(sseEmitterLoadBalancer.getOne(), pull());
-        }
-    }
-
-     private void sendMessage(SseEmitter sseEmitter, MessageDto message) {
-         try {
-             SseEmitter.SseEventBuilder eventBuilder = event().name("broadcastedMessage")
-                                                              .id(message.key())
-                                                              .data(message, MediaType.APPLICATION_JSON);
-             sseEmitter.send(eventBuilder);
-             log.info("message with key {} sent successfully", message.key());
-         } catch (Exception e) {
-             log.error("error in send message", e);
-             removeAndLog(sseEmitter);
-             sseEmitter.completeWithError(e);
-         }
-     }
-
-    private void removeAndLog(SseEmitter emitter) {
-        if (sseEmitterLoadBalancer.remove(emitter)) {
-            log.info("Unsubscribe client {}", emitter.toString());
         }
     }
 }

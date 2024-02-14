@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Slf4j
 @RestController
@@ -21,7 +20,7 @@ public class ClientController {
 
     @PostMapping(path = "/push")
     public boolean push(@RequestBody MessageDto message) {
-        log.info("message pushed: " + message.key());
+        log.info("message pushed with key: " + message.key() + ", value: " + message.value());
         return clientService.push(message);
     }
 
@@ -29,12 +28,7 @@ public class ClientController {
     public MessageDto pull() {
         MessageDto message = clientService.pull();
         if (message == null) throw new HttpClientErrorException(HttpStatus.METHOD_NOT_ALLOWED);
-        log.info("message pulled: " + message.key());
+        log.info("message pulled with key: " + message.key() + ", value: " + message.value());
         return message;
-    }
-
-    @GetMapping(path = "/subscribe")
-    public SseEmitter subscribe() {
-        return clientService.subscribe();
     }
 }

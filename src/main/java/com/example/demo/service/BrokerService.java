@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -10,16 +11,18 @@ import java.util.stream.Collectors;
 import com.example.demo.model.*;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class BrokerService {
 
+    private final RestTemplate restTemplate;
     private final HashMap<String, Broker> brokers = new HashMap<>();
     private final LoadBalancer<Broker> brokerLoadBalancer = new RoundRobin<>();
     private final Map<Broker, Broker> replicaBrokers = new HashMap<>(); // replica of each broker
-    private final Map<Broker, Set<String>> brokerInsideReplications = new HashMap<>(); // replications inside of each broker
+    private final Map<Broker, Set<String>> brokerInsideReplications = new HashMap<>(); // replications inside each broker
 
     public JoinResponse addBroker(Broker broker) {
         brokers.put(broker.name(), broker);
@@ -60,7 +63,8 @@ public class BrokerService {
         int min = Integer.MAX_VALUE;
         Set<Map.Entry<Broker, Set<String>>> entries = brokerInsideReplications.entrySet()
                                                                               .stream()
-                                                                              .filter(x -> !x.getKey().equals(broker))
+                                                                              .filter(x -> !x.getKey().equals(broker)
+                                                                                      && getBrokerHealth(x.getKey()))
                                                                               .collect(Collectors.toSet());
         for (Map.Entry<Broker, Set<String>> brokerSetEntry : entries) {
             if (brokerSetEntry.getValue().size() <= min) {
@@ -69,5 +73,19 @@ public class BrokerService {
             }
         }
         return replica;
+    }
+
+    private Boolean getBrokerHealth(Broker broker) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        String uri = broker.address() + "/api/health";
+        try {
+            ResponseEntity<Void> result = restTemplate.exchange(uri, HttpMethod.GET, entity, Void.class);
+            return result.getStatusCode().equals(HttpStatusCode.valueOf(200));
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
