@@ -11,9 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 
 @Slf4j
 @Component
@@ -22,7 +20,7 @@ public class ClientService {
 
     private final RestTemplate restTemplate;
     private final BrokerService brokerService;
-    private final Queue<String> messages = new LinkedList<>();
+    private final MessageService messageService;
 
     public boolean push(MessageDto message) {
         Broker broker = brokerService.getBroker();
@@ -37,7 +35,7 @@ public class ClientService {
         try {
             ResponseEntity<Void> result = restTemplate.exchange(uri, HttpMethod.POST, entity, Void.class);
             if (result.getStatusCode().equals(HttpStatusCode.valueOf(200))) {
-                return messages.add(broker.name());
+                return messageService.push(broker.name());
             }
             return false;
         } catch (Exception e) {
@@ -52,7 +50,7 @@ public class ClientService {
         try {
             ResponseEntity<Void> result = restTemplate.exchange(uri, HttpMethod.POST, entity, Void.class);
             if (result.getStatusCode().equals(HttpStatusCode.valueOf(200))) {
-                return messages.add(broker.name());
+                return messageService.push(broker.name());
             }
             return false;
         } catch (Exception e) {
@@ -61,7 +59,7 @@ public class ClientService {
     }
 
     public MessageDto pull() {
-        String brokerName = messages.poll();
+        String brokerName = messageService.pull();
         if (brokerName == null) {
             return new MessageDto("null", null);
         }

@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.*;
@@ -19,16 +20,22 @@ import org.springframework.web.client.RestTemplate;
 public class BrokerService {
 
     private final RestTemplate restTemplate;
-    private final HashMap<String, Broker> brokers = new HashMap<>();
-    private final LoadBalancer<Broker> brokerLoadBalancer = new RoundRobin<>();
-    private final Map<Broker, Broker> replicaBrokers = new HashMap<>(); // replica of each broker
-    private final Map<Broker, Set<String>> brokerInsideReplications = new HashMap<>(); // replications inside each broker
+    private final FileService fileService;
+    @Setter
+    private LoadBalancer<Broker> brokerLoadBalancer = new RoundRobin<>();
+    @Setter
+    private Map<String, Broker> brokers = new HashMap<>();
+    @Setter
+    private Map<Broker, Broker> replicaBrokers = new HashMap<>(); // replica of each broker
+    @Setter
+    private Map<Broker, Set<String>> brokerInsideReplications = new HashMap<>(); // replications inside each broker
 
     public JoinResponse addBroker(Broker broker) {
         brokers.put(broker.name(), broker);
         brokerInsideReplications.put(broker, new HashSet<>());
         setReplica(broker);
         brokerLoadBalancer.addOne(broker);
+        fileService.writeStateModel(StateModel.fromMap(replicaBrokers));
         return new JoinResponse(broker.name());
     }
 
@@ -48,6 +55,7 @@ public class BrokerService {
     private void setReplica(Broker broker) {
         setReplicaForBroker(broker);
         replicaBrokers.entrySet().stream().filter(x -> x.getValue() == null).forEach(x -> setReplicaForBroker(x.getKey()));
+        fileService.writeStateModel(StateModel.fromMap(replicaBrokers));
     }
 
     private void setReplicaForBroker(Broker broker) {

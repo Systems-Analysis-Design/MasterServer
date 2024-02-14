@@ -4,7 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RoundRobin<T> implements LoadBalancer<T> {
-    private final List<T> list = new ArrayList<>();
+    private final List<T> list;
+
+    public RoundRobin(List<T> list) {
+        this.list = list;
+    }
+
+    public RoundRobin() {
+        this.list = new ArrayList<>();
+    }
+
     private int offset = 0;
 
     public T getOne() {
