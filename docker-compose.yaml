@@ -3,6 +3,7 @@ version: "3.9"
 services:
   master:
     image: mirzaeimahdi409/systems_analysis_design_master:latest
+    pull_policy: always
     ports:
       - target: 8080
         published: 8080
