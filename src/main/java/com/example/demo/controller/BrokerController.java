@@ -5,7 +5,6 @@ import com.example.demo.model.BrokerJoinRequest;
 import com.example.demo.model.HealthRequestDto;
 import com.example.demo.model.JoinResponse;
 import com.example.demo.service.BrokerService;
-import com.example.demo.metrics.BrokerServerMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,13 +19,11 @@ import java.util.UUID;
 public class BrokerController {
 
     private final BrokerService brokerService;
-    private final BrokerServerMetrics brokerServerMetrics;
 
     @PostMapping(path = "/api/join")
     public JoinResponse join(@RequestBody BrokerJoinRequest brokerJoinRequest) {
         log.info(String.format("broker joined with address: %s", brokerJoinRequest.host()));
-        Broker broker = new Broker(brokerJoinRequest.host(), brokerJoinRequest.host());
-        brokerServerMetrics.incrementBrokerServersCount();
+        Broker broker = new Broker(UUID.randomUUID().toString(), brokerJoinRequest.host());
         return brokerService.addBroker(broker);
     }
 
